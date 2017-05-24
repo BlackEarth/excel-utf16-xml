@@ -1,10 +1,12 @@
 
-import os, re, sys, json
+import os, re, sys, json, logging
 from lxml.etree import Entity
 from bl.string import String
 from bl.text import Text
 from bxml import XML
 from bxml.builder import Builder
+
+log = logging.getLogger(__name__)
 
 NS = {
     'aid': "http://ns.adobe.com/AdobeInDesign/4.0/",
@@ -22,29 +24,29 @@ def normalize_text(text, quote='"'):
     n = len(text)
     while i < n:
         c = text[i]
-        # print(i, c)
+        log.debug(i, c)
         if c=='\\' and text[i+1]==quote:
-            # print('escaped quote,', text[i+1])
+            log.debug('escaped quote,', text[i+1])
             i += 1
         elif c=='\r':
-            # print('linebreak')
+            log.debug('linebreak')
             text = text[:i] + text[i+1:]
             n = len(text)
             i -= 1
         elif c==quote:
             quoted = not(quoted)
-            # print('quote, quoted =', quoted)
+            log.debug('quote, quoted =', quoted)
             text = text[:i] + text[i+1:]
             n = len(text)
             i -=1 
         elif quoted==True:
             if c=='\n':
-                # print('newline')
+                log.debug('newline')
                 text = text[:i] + '\\n' + text[i+1:]
                 n = len(text)
                 i += 1
             elif c=='\t':
-                # print('tab')
+                log.debug('tab')
                 text = text[:i] + '\\t' + text[i+1:]
                 n = len(text)
                 i += 1
@@ -56,7 +58,8 @@ def excel_key(index):
     X = lambda n: ~n and X((n // 26)-1) + chr(65 + (n % 26)) or ''
     return X(int(index))
 
-def normalized_text_to_xml(text, delimiter='\t', headers=True, tag='item', tagpl=None, namespace=None, aid=False):
+def normalized_text_to_xml(text, delimiter='\t', headers=True, tag='item', tagpl=None, 
+        namespace=None, aid=False, omit_empty=True):
     if aid==True:
         B = Builder(default=namespace, **NS)._
     else:
@@ -73,18 +76,20 @@ def normalized_text_to_xml(text, delimiter='\t', headers=True, tag='item', tagpl
         item = B(tag)
         values = [v.replace('\\t', '\t').replace('\\n', '\n') for v in line.split(delimiter)]
         for i in range(len(values)):
-            elem = B(keys[i], values[i])
-            if aid==True:
-                elem.set(AID_PSTYLE_KEY, keys[i])
-                elem.append(Entity('#xA'))
-            item.append(elem)
+            if values[i].strip() != '' or omit_empty==False:        # omit empty elements
+                elem = B(keys[i], values[i])
+                if aid==True:
+                    elem.set(AID_PSTYLE_KEY, keys[i])
+                    elem.append(Entity('#xA'))
+                item.append(elem)
         root.append(item)
     return root
 
-def csv_to_xml(fn, encoding='UTF-16', delimiter='\t', quote='"', headers=True, tag='item', namespace=None, aid=False):
+def csv_to_xml(fn, encoding='UTF-16', delimiter='\t', quote='"', headers=True, tag='item', namespace=None, aid=False, omit_empty=True):
     t = Text(fn=fn, encoding=encoding)
     text = normalize_text(t.text, quote=quote)
-    x = XML(fn=fn+'.xml', root=normalized_text_to_xml(text, delimiter=delimiter, headers=headers, tag=tag, namespace=namespace, aid=aid))
+    root = normalized_text_to_xml(text, delimiter=delimiter, headers=headers, tag=tag, namespace=namespace, aid=aid, omit_empty=omit_empty)
+    x = XML(fn=fn+'.xml', root=root)
     return x
 
 if __name__=='__main__':
@@ -95,7 +100,6 @@ if __name__=='__main__':
     else:
         aid = False
     for fn in args:
-        print(fn)
         x = csv_to_xml(fn, aid=aid)
         x.write(canonicalized=False, pretty_print=True)
         print(x.fn)
