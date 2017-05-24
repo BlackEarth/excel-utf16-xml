@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd `dirname $0`; 
+source ../venv
+for fn in "$@"; do
+	python -m eu16x.__init__ "$fn"
+done
