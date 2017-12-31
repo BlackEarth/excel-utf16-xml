@@ -28,7 +28,7 @@ def csv_to_data(fn, encoding='UTF-16', delimiter='\t', quote='"', headers=True, 
         values = [v.replace('\\t', '\t').replace('\\n', '\n').replace('\\r', '\n') for v in line.split(delimiter)]
         for i in range(len(values)):
             if values[i].strip() != '' or omit_empty==False:        # omit empty elements
-                item[keys[i]] = values[i]
+                item[keys[i]] = values[i].strip()
         if len(item.keys()) > 0:
             data.append(item)
     return data
