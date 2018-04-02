@@ -24,7 +24,7 @@ def csv_to_data(fn, encoding='UTF-16', delimiter='\t', quote='"', headers=True, 
     else:
         keys = [excel_key(i) for i in range(len(lines[0].split(delimiter)))]
     data = []
-    log.debug("%d lines of data" % len(lens))
+    log.debug("%d lines of data" % len(lines))
     for line in lines:
         if lines.index(line) % 1000 == 0: log.debug("%d lines processed" % lines.index(line))
         item = {}
